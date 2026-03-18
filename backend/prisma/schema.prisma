@@ -1,0 +1,55 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String          @id @default(uuid())
+  name          String
+  email         String          @unique
+  password      String
+  leads         Lead[]
+  searchHistory SearchHistory[]
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+}
+
+model Lead {
+  id             String   @id @default(uuid())
+  name           String
+  phone          String?
+  website        String?
+  googleMapsLink String?
+  address        String?
+  rating         Float?
+  reviewsCount   Int?
+  searchQuery    String?          // ex: "Academia - São Paulo"
+  notes          String?          // anotações do usuário sobre o lead
+  status         Status   @default(FOUND)
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId         String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+model SearchHistory {
+  id          String   @id @default(uuid())
+  keyword     String
+  city        String
+  resultsCount Int     @default(0)  // quantos resultados retornou
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId      String
+  createdAt   DateTime @default(now())
+}
+
+enum Status {
+  FOUND
+  CONTACTED
+  REPLIED
+  MEETING
+  CLIENT
+}

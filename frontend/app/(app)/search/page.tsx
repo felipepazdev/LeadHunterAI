@@ -1,0 +1,240 @@
+'use client';
+
+import { useState } from 'react';
+import { Search, MapPin, Phone, Globe, Star, Bookmark, BookmarkCheck, Loader2 } from 'lucide-react';
+import { api } from '@/services/api';
+import { SearchResult } from '@/types';
+
+export default function SearchPage() {
+  const [keyword,  setKeyword]  = useState('');
+  const [city,     setCity]     = useState('');
+  const [results,  setResults]  = useState<SearchResult[]>([]);
+  const [saved,    setSaved]    = useState<Set<number>>(new Set());
+  const [saving,   setSaving]   = useState<Set<number>>(new Set());
+  const [loading,  setLoading]  = useState(false);
+  const [searched, setSearched] = useState(false);
+  const [toast,    setToast]    = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
+  const [error,    setError]    = useState('');
+
+  function showToast(msg: string, type: 'success' | 'error' = 'success') {
+    setToast({ msg, type });
+    setTimeout(() => setToast(null), 3000);
+  }
+
+  async function handleSearch(e: React.FormEvent) {
+    e.preventDefault();
+    const k = keyword.trim();
+    const c = city.trim();
+    if (!k || !c) return;
+
+    setLoading(true);
+    setError('');
+    setSaved(new Set());
+    setSearched(false);
+
+    try {
+      const data = await api.leads.search({ keyword: k, city: c });
+      setResults(data);
+      setSearched(true);
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : 'Erro ao realizar a busca. Tente novamente.');
+      setResults([]);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleSave(idx: number, result: SearchResult) {
+    if (saved.has(idx)) return;
+    setSaving(prev => new Set(prev).add(idx));
+    try {
+      await api.leads.create({
+        name:          result.name,
+        phone:         result.phone,
+        website:       result.website,
+        googleMapsLink: result.googleMapsLink,
+        rating:        result.rating,
+        reviewsCount:  result.reviewsCount,
+      });
+      setSaved(prev => new Set(prev).add(idx));
+      showToast(`"${result.name}" salvo nos seus leads!`);
+    } catch (e: unknown) {
+      showToast(e instanceof Error ? e.message : 'Erro ao salvar lead', 'error');
+    } finally {
+      setSaving(prev => { const s = new Set(prev); s.delete(idx); return s; });
+    }
+  }
+
+  function renderStars(rating: number) {
+    return '★'.repeat(Math.round(rating)) + '☆'.repeat(5 - Math.round(rating));
+  }
+
+  return (
+    <>
+      <div className="page-header">
+        <h1 className="page-title">Buscar Leads</h1>
+        <p className="page-subtitle">Encontre empresas por segmento e cidade</p>
+      </div>
+
+      {/* Search Hero */}
+      <div className="search-hero">
+        <h2 style={{ fontSize: 20, fontWeight: 700, color: 'var(--text-primary)', marginBottom: 6 }}>
+          🔍 Prospecção Inteligente
+        </h2>
+        <p style={{ fontSize: 14, color: 'var(--text-secondary)' }}>
+          Digite o segmento e a cidade para encontrar empresas qualificadas
+        </p>
+
+        <form onSubmit={handleSearch} className="search-bar">
+          <div className="input-with-icon" style={{ flex: 2 }}>
+            <Search size={16} className="input-icon" />
+            <input
+              className="form-input"
+              placeholder="Ex: Clínica Odontológica, Academia, Restaurante..."
+              value={keyword}
+              onChange={e => setKeyword(e.target.value)}
+            />
+          </div>
+          <div className="input-with-icon" style={{ flex: 1 }}>
+            <MapPin size={16} className="input-icon" />
+            <input
+              className="form-input"
+              placeholder="Cidade"
+              value={city}
+              onChange={e => setCity(e.target.value)}
+            />
+          </div>
+          <button
+            type="submit"
+            className="btn btn-primary"
+            disabled={loading || !keyword.trim() || !city.trim()}
+            style={{ minWidth: 140, justifyContent: 'center' }}
+          >
+            {loading ? <Loader2 size={16} style={{ animation: 'spin 0.7s linear infinite' }} /> : <Search size={16} />}
+            {loading ? 'Buscando...' : 'Buscar'}
+          </button>
+        </form>
+      </div>
+
+      {/* Erro */}
+      {error && (
+        <div style={{ background: 'rgba(248,113,113,.1)', border: '1px solid rgba(248,113,113,.25)', borderRadius: 'var(--radius-sm)', padding: '12px 16px', marginBottom: 24, color: 'var(--danger)', fontSize: 14 }}>
+          {error}
+        </div>
+      )}
+
+      {/* Resultados */}
+      {loading && (
+        <div className="loading-overlay">
+          <div className="spinner" /> Buscando empresas em {city}...
+        </div>
+      )}
+
+      {!loading && searched && results.length === 0 && (
+        <div className="empty-state">
+          <div className="empty-icon">🔍</div>
+          <p className="empty-title">Nenhum resultado encontrado</p>
+          <p className="empty-desc">Tente outro segmento ou cidade diferente</p>
+        </div>
+      )}
+
+      {!loading && results.length > 0 && (
+        <>
+          <div className="flex items-center justify-between mb-4">
+            <p style={{ fontSize: 14, color: 'var(--text-secondary)' }}>
+              <strong style={{ color: 'var(--text-primary)' }}>{results.length}</strong> empresas encontradas para
+              {' '}<strong style={{ color: 'var(--accent)' }}>{keyword}</strong> em
+              {' '}<strong style={{ color: 'var(--accent2)' }}>{city}</strong>
+            </p>
+            <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>{saved.size} salvo(s)</span>
+          </div>
+
+          <div className="result-grid">
+            {results.map((result, idx) => {
+              const isSaved  = saved.has(idx);
+              const isSaving = saving.has(idx);
+              return (
+                <div key={idx} className="result-card" style={{ opacity: isSaved ? 0.75 : 1 }}>
+                  <div className="flex items-center justify-between" style={{ marginBottom: 12 }}>
+                    <p className="result-card-title" style={{ flex: 1, marginRight: 12, marginBottom: 0 }}>
+                      {result.name}
+                    </p>
+                    <button
+                      className={`btn btn-sm ${isSaved ? 'btn-success' : 'btn-secondary'}`}
+                      onClick={() => handleSave(idx, result)}
+                      disabled={isSaved || isSaving}
+                      title={isSaved ? 'Já salvo' : 'Salvar lead'}
+                    >
+                      {isSaving
+                        ? <span className="spinner" style={{ width: 12, height: 12 }} />
+                        : isSaved
+                          ? <><BookmarkCheck size={13} /> Salvo</>
+                          : <><Bookmark size={13} /> Salvar</>}
+                    </button>
+                  </div>
+
+                  {result.address && (
+                    <div className="result-card-meta">
+                      <MapPin size={12} /> {result.address}
+                    </div>
+                  )}
+                  {result.phone && (
+                    <div className="result-card-meta">
+                      <Phone size={12} /> {result.phone}
+                    </div>
+                  )}
+                  {result.website && (
+                    <div className="result-card-meta">
+                      <Globe size={12} />
+                      <a href={result.website} target="_blank" rel="noreferrer"
+                        style={{ color: 'var(--accent2)', textDecoration: 'none' }}>
+                        {result.website.replace('https://', '')}
+                      </a>
+                    </div>
+                  )}
+
+                  {result.rating !== undefined && (
+                    <div className="result-rating">
+                      <span className="stars">{renderStars(result.rating)}</span>
+                      <span style={{ fontSize: 13, color: 'var(--text-primary)', fontWeight: 600 }}>
+                        {result.rating}
+                      </span>
+                      <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
+                        ({result.reviewsCount?.toLocaleString('pt-BR')} avaliações)
+                      </span>
+                    </div>
+                  )}
+
+                  {result.googleMapsLink && (
+                    <div style={{ marginTop: 12 }}>
+                      <a href={result.googleMapsLink} target="_blank" rel="noreferrer"
+                        className="btn btn-secondary btn-sm" style={{ fontSize: 11 }}>
+                        <MapPin size={11} /> Ver no Google Maps
+                      </a>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </>
+      )}
+
+      {!searched && !loading && (
+        <div className="empty-state" style={{ padding: '48px 20px' }}>
+          <div className="empty-icon" style={{ fontSize: 36 }}>🗺️</div>
+          <p className="empty-title">Pronto para prospectar?</p>
+          <p className="empty-desc">
+            Preencha o segmento e a cidade acima para encontrar empresas qualificadas
+          </p>
+        </div>
+      )}
+
+      {toast && (
+        <div className={`toast toast-${toast.type}`}>
+          {toast.type === 'success' ? '✓' : '✗'} {toast.msg}
+        </div>
+      )}
+    </>
+  );
+}
