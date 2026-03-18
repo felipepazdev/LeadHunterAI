@@ -9,9 +9,10 @@ import { env } from './config/env';
 import { errorHandler } from './shared/middlewares/errorHandler.middleware';
 
 // Módulos
-import authRoutes  from './modules/auth/auth.routes';
-import usersRoutes from './modules/users/users.routes';
-import leadsRoutes from './modules/leads/leads.routes';
+import authRoutes              from './modules/auth/auth.routes';
+import usersRoutes             from './modules/users/users.routes';
+import leadsRoutes             from './modules/leads/leads.routes';
+import opportunityEngineRoutes from './modules/opportunity-engine/opportunity-engine.routes';
 
 export function createApp() {
   const app = express();
@@ -37,9 +38,10 @@ export function createApp() {
   });
 
   /* ── Rotas dos módulos ── */
-  app.use('/auth',  authRoutes);
-  app.use('/users', usersRoutes);
-  app.use('/leads', leadsRoutes);
+  app.use('/auth',               authRoutes);
+  app.use('/users',              usersRoutes);
+  app.use('/leads',              leadsRoutes);
+  app.use('/opportunity-engine', opportunityEngineRoutes);
 
   /* ── 404 handler ── */
   app.use((_req, res) => {

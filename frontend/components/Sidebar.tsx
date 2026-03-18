@@ -7,10 +7,11 @@ import { getSession, clearSession } from '@/services/auth';
 import { useEffect, useState } from 'react';
 
 const NAV = [
-  { href: '/dashboard', label: 'Dashboard',    icon: LayoutDashboard },
-  { href: '/leads',     label: 'Meus Leads',   icon: Target },
-  { href: '/search',   label: 'Buscar Leads',  icon: Search },
-  { href: '/settings', label: 'Configurações', icon: Settings },
+  { href: '/dashboard',          label: 'Dashboard',           icon: LayoutDashboard },
+  { href: '/leads',              label: 'Meus Leads',          icon: Target },
+  { href: '/search',             label: 'Buscar Leads',        icon: Search },
+  { href: '/opportunity-engine', label: 'Opportunity Engine',  icon: Zap },
+  { href: '/settings',           label: 'Configurações',       icon: Settings },
 ];
 
 export default function Sidebar() {
