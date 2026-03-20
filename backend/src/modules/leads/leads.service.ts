@@ -120,16 +120,9 @@ export class LeadsService {
       throw new AppError('Keyword e cidade são obrigatórias para pesquisar', 400);
     }
 
-    // Simulação de busca (Mock de Scraper)
-    const results = Array.from({ length: 8 }, (_, i) => ({
-      name:           `${keyword.trim()} — ${city.trim()} #${i + 1}`,
-      phone:          `(11) 9${Math.floor(Math.random() * 90000000 + 10000000)}`,
-      website:        i % 3 !== 0 ? `https://empresa${i + 1}.com.br` : null,
-      googleMapsLink: `https://maps.google.com/?q=${encodeURIComponent(keyword + ' ' + city)}`,
-      rating:         parseFloat((3.5 + Math.random() * 1.5).toFixed(1)),
-      reviewsCount:   Math.floor(Math.random() * 800 + 10),
-      address:        `Rua Exemplo, ${100 + i} — ${city.trim()}`,
-    }));
+    // Usa o serviço centralizado que possui integração Firecrawl
+    const { LeadCollectorService } = require('../opportunity-engine/lead-collector.service');
+    const results = await LeadCollectorService.collect(keyword.trim(), city.trim());
 
     // Registra no histórico
     await this.saveSearchHistory(userId, keyword, city, results.length);

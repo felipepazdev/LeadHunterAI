@@ -10,7 +10,7 @@ const NAV = [
   { href: '/dashboard',          label: 'Dashboard',           icon: LayoutDashboard },
   { href: '/leads',              label: 'Meus Leads',          icon: Target },
   { href: '/search',             label: 'Buscar Leads',        icon: Search },
-  { href: '/opportunity-engine', label: 'Opportunity Engine',  icon: Zap },
+  { href: '/opportunity-engine', label: 'Motor de Oportunidades',  icon: Zap },
   { href: '/settings',           label: 'Configurações',       icon: Settings },
 ];
 

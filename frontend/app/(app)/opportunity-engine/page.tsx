@@ -405,7 +405,7 @@ export default function OpportunityEnginePage() {
           </div>
           <div>
             <h1 style={{ margin: 0, fontSize: 22, fontWeight: 700, color: 'var(--text-primary)' }}>
-              Lead Opportunity Engine
+              Motor de Oportunidades
             </h1>
             <p style={{ margin: 0, fontSize: 13, color: 'var(--text-muted)' }}>
               Análise inteligente de oportunidades de venda por IA
