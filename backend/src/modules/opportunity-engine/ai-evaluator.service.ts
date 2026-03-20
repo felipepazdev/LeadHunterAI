@@ -54,19 +54,22 @@ export class AIEvaluatorService {
   private static fallbackEvaluate(
     score: OpportunityScore,
     opportunities: DetectedOpportunity[],
+    company: RawCompany,
   ): AIEvaluation {
     let potential: AIPotential;
     let reasoning: string;
 
+    const ratingInfo = company.rating ? `${company.rating}⭐ (${company.reviewsCount} av.)` : 'sem avaliação';
+
     if (score.total >= 70) {
       potential = 'ALTO_POTENCIAL';
-      reasoning = `Score ${score.total}/100 — empresa tem budget de marketing e presença digital fraca. ${opportunities.length} oportunidade(s) identificada(s).`;
+      reasoning = `Score ${score.total}/100 — empresa tem budget de marketing, mas presença digital fraca. Recomenda-se corrigir as ${opportunities.length} oportunidade(s) detectadas. Melhorar a reputação atual (${ratingInfo}) no Google ajudará significativamente no SEO local e no aumento de conversões.`;
     } else if (score.total >= 40) {
       potential = 'MÉDIO_POTENCIAL';
-      reasoning = `Score ${score.total}/100 — empresa tem potencial moderado com ${opportunities.length} oportunidade(s). Abordagem consultiva recomendada.`;
+      reasoning = `Score ${score.total}/100 — potencial moderado com ${opportunities.length} oportunidade(s). Uma abordagem consultiva focada na infraestrutura do site e no SEO local (atualmente ${ratingInfo}) é recomendada para alavancar a atração de clientes orgânicos.`;
     } else {
       potential = 'BAIXO_POTENCIAL';
-      reasoning = `Score ${score.total}/100 — empresa possui presença digital razoável ou perfil de baixo investimento em marketing.`;
+      reasoning = `Score ${score.total}/100 — empresa possui perfil de baixo investimento ou infraestrutura digital já consolidada. A avaliação (${ratingInfo}) indica que ações pontuais de SEO e conversão podem oferecer ganhos residuais.`;
     }
 
     return { potential, reasoning };
@@ -84,11 +87,11 @@ export class AIEvaluatorService {
     // Tenta Gemini primeiro
     try {
       const prompt = `
-Você é um especialista em prospecção de serviços digitais.
-Analise o perfil desta empresa e classifique o potencial de venda:
+Você é um especialista em marketing digital e SEO, focado em prospecção de vendas B2B.
+Analise o perfil digital desta empresa e classifique o seu potencial como cliente, detalhando profundamente o que pode ser melhorado.
 
 EMPRESA: ${company.name}
-AVALIAÇÃO GOOGLE: ${company.rating ?? 'Sem avaliação'} ⭐ (${company.reviewsCount ?? 0} reviews)
+AVALIAÇÃO GOOGLE (reputação local): ${company.rating ?? 'Sem avaliação'} ⭐ (${company.reviewsCount ?? 0} reviews)
 WEBSITE: ${company.website ?? 'Não possui'}
 ANÚNCIO GOOGLE: ${adResult.marketingActive ? `Sim (posição ${adResult.adPosition})` : 'Não detectado'}
 QUALIDADE DO SITE (1-10): ${siteAnalysis.hasWebsite ? siteAnalysis.digitalScore : 'N/A — sem site'}
@@ -98,10 +101,14 @@ FORMULÁRIO DE CONTATO: ${siteAnalysis.hasContactForm ? 'Sim' : 'Não'}
 OPORTUNIDADES DETECTADAS: ${opportunities.map(o => o.label).join(', ') || 'Nenhuma'}
 SCORE DE OPORTUNIDADE: ${score.total}/100
 
+INSTRUÇÕES:
+Sua avaliação deve conter uma análise detalhada (business intelligence) focada em conversão, tempo de carregamento e experiência do usuário (UX).
+INCLUA, OBRIGATORIAMENTE, uma análise específica de SEO Local baseada no rank/avaliação do Google da empresa, e como melhorar a reputação online deles para captar lead orgânico.
+
 Responda EXATAMENTE neste formato JSON (sem markdown, sem \`\`\`):
 {
   "potential": "ALTO_POTENCIAL" | "MÉDIO_POTENCIAL" | "BAIXO_POTENCIAL",
-  "reasoning": "Explicação em 1-2 frases em português"
+  "reasoning": "Texto explicativo (básico de 3 a 5 frases) rico em detalhes destacando o score total, o impacto em SEO / tempo de carregamento e a situação da avaliação do Google Meu Negócio / rank no Google."
 }
 `.trim();
 
@@ -124,7 +131,7 @@ Responda EXATAMENTE neste formato JSON (sem markdown, sem \`\`\`):
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
       console.warn(`[AIEvaluator] Gemini indisponível, usando fallback. Motivo: ${msg}`);
-      return this.fallbackEvaluate(score, opportunities);
+      return this.fallbackEvaluate(score, opportunities, company);
     }
   }
 }
