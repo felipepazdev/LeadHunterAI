@@ -64,6 +64,7 @@ export interface SearchResult {
   rating?: number;
   reviewsCount?: number;
   address?: string;
+  instagram?: string | null;
 }
 
 export interface ApiError {

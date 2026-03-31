@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Search, MapPin, Phone, Globe, Star, Bookmark, BookmarkCheck, Loader2 } from 'lucide-react';
+import { Search, MapPin, Phone, Globe, Star, Bookmark, BookmarkCheck, Loader2, Instagram, MessageCircle } from 'lucide-react';
 import { api } from '@/services/api';
 import { SearchResult } from '@/types';
 
@@ -181,17 +181,38 @@ export default function SearchPage() {
                   {result.phone && (
                     <div className="result-card-meta">
                       <Phone size={12} /> {result.phone}
-                    </div>
-                  )}
-                  {result.website && (
-                    <div className="result-card-meta">
-                      <Globe size={12} />
-                      <a href={result.website} target="_blank" rel="noreferrer"
-                        style={{ color: 'var(--accent2)', textDecoration: 'none' }}>
-                        {result.website.replace('https://', '')}
+                      <a href={`https://wa.me/55${result.phone.replace(/\D/g,'')}`} target="_blank" rel="noreferrer" 
+                         style={{ marginLeft: 8, color: '#25D366' }} title="Chamar no WhatsApp">
+                        <MessageCircle size={14} />
                       </a>
                     </div>
                   )}
+                  
+                  <div style={{ display: 'flex', gap: 12, marginTop: 8 }}>
+                    {result.website ? (
+                      <div className="result-card-meta" style={{ marginBottom: 0 }}>
+                        <Globe size={12} />
+                        <a href={result.website} target="_blank" rel="noreferrer"
+                          style={{ color: 'var(--accent2)', textDecoration: 'none' }}>
+                          Website
+                        </a>
+                      </div>
+                    ) : (
+                      <div className="result-card-meta" style={{ marginBottom: 0, opacity: 0.5 }}>
+                        <Globe size={12} /> <span>Sem Website</span>
+                      </div>
+                    )}
+
+                    {result.instagram && (
+                      <div className="result-card-meta" style={{ marginBottom: 0 }}>
+                        <Instagram size={12} style={{ color: '#E4405F' }} />
+                        <a href={result.instagram} target="_blank" rel="noreferrer"
+                          style={{ color: '#E4405F', textDecoration: 'none' }}>
+                          Instagram
+                        </a>
+                      </div>
+                    )}
+                  </div>
 
                   {result.rating !== undefined && (
                     <div className="result-rating">

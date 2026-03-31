@@ -54,6 +54,8 @@ export interface RawCompany {
   address?: string | null;
   rating?: number | null;
   reviewsCount?: number | null;
+  isSponsored?: boolean;
+  instagram?: string | null;
 }
 
 export interface AdDetectionResult {

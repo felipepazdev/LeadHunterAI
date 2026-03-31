@@ -12,6 +12,7 @@ export interface RawCompany {
   rating?: number | null;
   reviewsCount?: number | null;
   isSponsored?: boolean;
+  instagram?: string | null;
 }
 
 /* ── Ad Detection ─────────────────────────────────────────────── */
