@@ -81,7 +81,7 @@ export class LeadCollectorService {
         const results: RawCompany[] = [];
 
         // 1. Tentar Google Maps (Nativo)
-        const mapsUrl = `https://serpapi.com/search.json?engine=google_maps&q=${encodeURIComponent(keyword)} ${encodeURIComponent(city)}&hl=pt-br&gl=br&api_key=${serpapiKey}`;
+        const mapsUrl = `https://serpapi.com/search.json?engine=google_maps&q=${encodeURIComponent(keyword)}+${encodeURIComponent(city)}&hl=pt-br&gl=br&type=search&api_key=${serpapiKey}`;
         const mapsResp = await fetch(mapsUrl);
         const mapsJson = await mapsResp.json() as any;
 
@@ -102,16 +102,16 @@ export class LeadCollectorService {
           });
         }
 
-        // 2. Se o Maps trouxe pouco ou nada, buscar no Google Web (Pack Local)
+        // 2. Se o Maps trouxe pouco ou nada, buscar no Google Web Local (tbm=lcl)
         if (results.length < 5) {
-          console.log(`[LeadCollector] Maps insuficiente (${results.length}), buscando via Google Search Local...`);
-          const webUrl = `https://serpapi.com/search.json?engine=google&q=empresas+de+${encodeURIComponent(keyword)}+em+${encodeURIComponent(city)}&hl=pt-br&gl=br&api_key=${serpapiKey}`;
+          console.log(`[LeadCollector] Maps insuficiente (${results.length}), buscando via Google Search Local (tbm=lcl)...`);
+          const webUrl = `https://serpapi.com/search.json?engine=google&q=${encodeURIComponent(keyword + ' ' + city)}&tbm=lcl&hl=pt-br&gl=br&api_key=${serpapiKey}`;
           const webResp = await fetch(webUrl);
           const webJson = await webResp.json() as any;
 
           if (webJson.local_results) {
+            console.log(`[LeadCollector] Fallback (Local Web) trouxe ${webJson.local_results.length} resultados.`);
             webJson.local_results.forEach((item: any) => {
-               // Evitar duplicados pelo nome
                const name = (item.title || item.name || '').split(/[-|]/)[0]?.trim();
                if (!results.some(r => r.name.toLowerCase() === name.toLowerCase())) {
                  results.push({
