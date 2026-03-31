@@ -1,10 +1,4 @@
-/**
- * opportunity-engine.service.ts
- * Orquestrador principal do módulo Lead Opportunity Engine.
- * Pipeline: Collector → AdDetector → SiteAnalyzer → OpportunityDetector
- *           → OpportunityScore → AIEvaluator → MessageGenerator → Rank
- */
-
+// v1.2 - Force Deploy: Multi-tier Ad Detection Logic
 import { AppError } from '../../shared/middlewares/errorHandler.middleware';
 import { AdDetectorService }          from './ad-detector.service';
 import { AIEvaluatorService }         from './ai-evaluator.service';
