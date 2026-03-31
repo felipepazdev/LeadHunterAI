@@ -35,7 +35,7 @@ export class OpportunityEngineService {
     // 1. Coleta empresas (usa as fornecidas ou coleta via mock)
     const companies: RawCompany[] = inputCompanies?.length
       ? inputCompanies
-      : await LeadCollectorService.collect(keyword.trim(), city.trim());
+      : await LeadCollectorService.collect(keyword.trim(), city.trim(), true);
 
     if (companies.length === 0) {
       throw new AppError('Nenhuma empresa encontrada para análise', 404);
