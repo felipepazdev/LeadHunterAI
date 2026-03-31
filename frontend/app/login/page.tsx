@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { api } from '@/services/api';
-import { saveSession } from '@/services/auth';
+import { isAuthenticated, saveSession } from '@/services/auth';
 import { Zap, Mail, Lock, User, Eye, EyeOff, ArrowRight } from 'lucide-react';
 
 export default function LoginPage() {
@@ -18,8 +18,9 @@ export default function LoginPage() {
   const [error, setError]     = useState('');
 
   useEffect(() => {
-    const token = localStorage.getItem('leadhunter_token');
-    if (token) router.replace('/dashboard');
+    if (isAuthenticated()) {
+      router.replace('/dashboard');
+    }
   }, [router]);
 
   async function handleSubmit(e: React.FormEvent) {

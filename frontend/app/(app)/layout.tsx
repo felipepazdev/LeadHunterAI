@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { isAuthenticated } from '@/services/auth';
+import { isAuthenticated, clearSession } from '@/services/auth';
 import Sidebar from '@/components/Sidebar';
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
@@ -11,6 +11,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (!isAuthenticated()) {
+      clearSession();
       router.replace('/login');
     } else {
       setReady(true);
