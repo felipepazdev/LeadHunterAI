@@ -15,6 +15,7 @@ export default function SearchPage() {
   const [searched, setSearched] = useState(false);
   const [toast,    setToast]    = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
   const [error,    setError]    = useState('');
+  const [sortBy,   setSortBy]   = useState('default');
 
   function showToast(msg: string, type: 'success' | 'error' = 'success') {
     setToast({ msg, type });
@@ -68,6 +69,22 @@ export default function SearchPage() {
   function renderStars(rating: number) {
     return '★'.repeat(Math.round(rating)) + '☆'.repeat(5 - Math.round(rating));
   }
+
+  const getSortedResults = () => {
+    const sorted = [...results];
+    switch (sortBy) {
+      case 'rating-desc':
+        return sorted.sort((a, b) => (b.rating || 0) - (a.rating || 0));
+      case 'rating-asc':
+        return sorted.sort((a, b) => (a.rating || 0) - (b.rating || 0));
+      case 'reviews-desc':
+        return sorted.sort((a, b) => (b.reviewsCount || 0) - (a.reviewsCount || 0));
+      case 'reviews-asc':
+        return sorted.sort((a, b) => (a.reviewsCount || 0) - (b.reviewsCount || 0));
+      default:
+        return sorted;
+    }
+  };
 
   return (
     <>
@@ -140,19 +157,35 @@ export default function SearchPage() {
 
       {!loading && results.length > 0 && (
         <>
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center justify-between mb-6">
             <p style={{ fontSize: 14, color: 'var(--text-secondary)' }}>
               <strong style={{ color: 'var(--text-primary)' }}>{results.length}</strong> empresas encontradas para
               {' '}<strong style={{ color: 'var(--accent)' }}>{keyword}</strong> em
               {' '}<strong style={{ color: 'var(--accent2)' }}>{city}</strong>
             </p>
-            <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>{saved.size} salvo(s)</span>
+            
+            <div className="flex items-center gap-3">
+              <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>{saved.size} salvo(s)</span>
+              <select 
+                className="form-input" 
+                style={{ width: '180px', padding: '6px 12px', fontSize: '13px' }}
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value)}
+              >
+                <option value="default">Ordenação Padrão</option>
+                <option value="rating-desc">Maior Avaliação</option>
+                <option value="rating-asc">Menor Avaliação</option>
+                <option value="reviews-desc">Mais Avaliações</option>
+                <option value="reviews-asc">Menos Avaliações</option>
+              </select>
+            </div>
           </div>
 
           <div className="result-grid">
-            {results.map((result, idx) => {
-              const isSaved  = saved.has(idx);
-              const isSaving = saving.has(idx);
+            {getSortedResults().map((result, idx) => {
+              const originalIdx = results.findIndex(r => r.name === result.name && r.phone === result.phone);
+              const isSaved  = saved.has(originalIdx !== -1 ? originalIdx : idx);
+              const isSaving = saving.has(originalIdx !== -1 ? originalIdx : idx);
               return (
                 <div key={idx} className="result-card" style={{ opacity: isSaved ? 0.75 : 1 }}>
                   <div className="flex items-center justify-between" style={{ marginBottom: 12 }}>
