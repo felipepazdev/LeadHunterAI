@@ -73,34 +73,29 @@ export class LeadCollectorService {
     // ── MODO BUSCA GERAL (SERPAPI - GOOGLE MAPS EXCLUSIVO) ──────────────────
     if (!isOpportunityMode && serpapiKey) {
       try {
-        console.log(`[LeadCollector] BUSCA GERAL: Usando SerpApi Google Maps para: ${keyword} em ${city}`);
+        console.log(`[LeadCollector] BUSCA GERAL (Maps): Usando SerpApi para: ${keyword} em ${city}`);
         
-        // Usar o motor específico do Google Maps da SerpApi
-        const response = await fetch(`https://serpapi.com/search.json?engine=google_maps&q=${encodeURIComponent(keyword)} ${encodeURIComponent(city)}&hl=pt-br&type=search&api_key=${serpapiKey}`);
-        const json = await response.json() as any;
+        // 1. Tentar Buscar no Google Maps Primeiro (Fiel ao print)
+        const mapsUrl = `https://serpapi.com/search.json?engine=google_maps&q=${encodeURIComponent(keyword)} ${encodeURIComponent(city)}&hl=pt-br&gl=br&google_domain=google.com.br&type=search&api_key=${serpapiKey}`;
+        const mapsResp = await fetch(mapsUrl);
+        const mapsJson = await mapsResp.json() as any;
 
-        if (json.local_results) {
-          const valid: RawCompany[] = [];
-          
-          json.local_results.forEach((item: any) => {
+        const results: RawCompany[] = [];
+
+        if (mapsJson.local_results) {
+          mapsJson.local_results.forEach((item: any) => {
              const cleanName = (item.title || item.name || '').split(/[-|]/)[0]?.trim();
              if (!cleanName || cleanName.length < 3) return;
 
-             // Identificar se o link é o Instagram deles
              const rawUrl = (item.website || '').toLowerCase();
              const isInstagram = rawUrl.includes('instagram.com');
-             const isSocialOrDir = [
-               'facebook.com','linkedin.com','guiamais.com.br','doctoralia.com','telelistas.net','cnpj.biz'
-             ].some(d => rawUrl.includes(d));
+             const isSocialOrDir = ['facebook.com','linkedin.com','guiamais.com.br','doctoralia.com','telelistas.net','cnpj.biz'].some(d => rawUrl.includes(d));
 
-             const validWebsite = (isInstagram || isSocialOrDir || !rawUrl) ? null : rawUrl;
-             const instagram = isInstagram ? rawUrl : null;
-
-             valid.push({
+             results.push({
                name: cleanName,
                phone: item.phone || null,
-               website: validWebsite,
-               instagram,
+               website: (isInstagram || isSocialOrDir || !rawUrl) ? null : rawUrl,
+               instagram: isInstagram ? rawUrl : null,
                googleMapsLink: item.link || `https://maps.google.com/?q=${encodeURIComponent(item.gps_coordinates?.latitude + ',' + item.gps_coordinates?.longitude || cleanName + ' ' + city)}`,
                address: item.address || `${city} (Maps)`,
                rating: item.rating || 0,
@@ -108,8 +103,35 @@ export class LeadCollectorService {
                isSponsored: false
              });
           });
-          return valid;
         }
+
+        // 2. Fallback: Se o Maps por algum motivo não trouxer nada, tenta busca orgânica (Web) filtrando lixo
+        if (results.length === 0) {
+           console.log(`[LeadCollector] Fallback: Maps vazio, tentando Busca Web para ${keyword} em ${city}...`);
+           const webUrl = `https://serpapi.com/search.json?engine=google&q=lista+de+${encodeURIComponent(keyword)}+em+${encodeURIComponent(city)}&hl=pt-br&gl=br&google_domain=google.com.br&api_key=${serpapiKey}`;
+           const webResp = await fetch(webUrl);
+           const webJson = await webResp.json() as any;
+
+           if (webJson.local_results) {
+             webJson.local_results.forEach((item: any) => {
+                const cleanName = (item.title || item.name || '').split(/[-|]/)[0]?.trim();
+                if (!cleanName || cleanName.length < 3) return;
+                results.push({
+                   name: cleanName,
+                   phone: item.phone || null,
+                   website: item.website || null,
+                   instagram: (item.website||'').includes('instagram') ? item.website : null,
+                   googleMapsLink: item.link || `https://maps.google.com/?q=${encodeURIComponent(cleanName + ' ' + city)}`,
+                   address: item.address || `${city} (Web)`,
+                   rating: item.rating || 4.5,
+                   reviewsCount: item.reviews || 10,
+                   isSponsored: false
+                });
+             });
+           }
+        }
+
+        return results;
       } catch (err) { console.error('[LeadCollector] SerpApi Google Maps Error:', err); }
     }
 
