@@ -85,6 +85,10 @@ export class LeadCollectorService {
         const mapsResp = await fetch(mapsUrl);
         const mapsJson = await mapsResp.json() as any;
 
+        if (mapsJson.error) {
+          console.error(`[LeadCollector] Erro retornado pela SerpApi (Maps):`, mapsJson.error);
+        }
+
         if (mapsJson.local_results && mapsJson.local_results.length > 0) {
           console.log(`[LeadCollector] Encontrados ${mapsJson.local_results.length} leads no Maps.`);
           mapsJson.local_results.forEach((item: any) => {
@@ -108,6 +112,10 @@ export class LeadCollectorService {
           const webUrl = `https://serpapi.com/search.json?engine=google&q=${encodeURIComponent(keyword + ' ' + city)}&tbm=lcl&hl=pt-br&gl=br&api_key=${serpapiKey}`;
           const webResp = await fetch(webUrl);
           const webJson = await webResp.json() as any;
+
+          if (webJson.error) {
+            console.error(`[LeadCollector] Erro retornado pela SerpApi (Web):`, webJson.error);
+          }
 
           if (webJson.local_results) {
             console.log(`[LeadCollector] Fallback (Local Web) trouxe ${webJson.local_results.length} resultados.`);
