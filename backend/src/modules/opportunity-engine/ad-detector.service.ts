@@ -16,7 +16,15 @@ export class AdDetectorService {
    *  - Introduz aleatoriedade para parecer dados reais.
    */
   static async detect(company: RawCompany): Promise<AdDetectionResult> {
-    // ── Heurística de simulação realista ──────────────────────────
+    // Se a empresa possui a tag confirmada da API (ex: SerpApi)
+    if (company.isSponsored !== undefined) {
+      return {
+        marketingActive: company.isSponsored,
+        adPosition: company.isSponsored ? 1 : undefined
+      };
+    }
+
+    // ── Heurística de simulação realista (fallback caso não tenha a flag) ──────────────────────────
     const ratingFactor   = (company.rating ?? 0) >= 4.0 ? 0.55 : 0.30;
     const reviewFactor   = (company.reviewsCount ?? 0) >= 50 ? 0.20 : 0.05;
     const websiteFactor  = company.website ? 0.15 : 0;
