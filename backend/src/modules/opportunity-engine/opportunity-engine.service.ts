@@ -33,18 +33,12 @@ export class OpportunityEngineService {
     }
 
     // 1. Coleta empresas (usa as fornecidas ou coleta via SerpApi)
-    let companies: RawCompany[] = inputCompanies?.length
+    const companies: RawCompany[] = inputCompanies?.length
       ? inputCompanies
       : await LeadCollectorService.collect(keyword.trim(), city.trim(), true);
 
-    // [MELHORIA] Se o modo Oportunidade (Ads) retornou ZERO, tentar busca orgânica para não deixar o usuário na mão
-    if (companies.length === 0 && !inputCompanies?.length) {
-      console.log(`[OpportunityEngine] Nenhum Ad encontrado para "${keyword}" em "${city}". Tentando busca orgânica...`);
-      companies = await LeadCollectorService.collect(keyword.trim(), city.trim(), false);
-    }
-
     if (companies.length === 0) {
-      throw new AppError('Nenhuma empresa encontrada para análise nesta região.', 404);
+      throw new AppError('Não encontramos empresas anunciantes nesta região no momento.', 404);
     }
 
     // 2. Processa cada empresa no pipeline completo (paralelo)
@@ -52,12 +46,12 @@ export class OpportunityEngineService {
       companies.map(company => this.processCompany(company))
     );
 
-    // 3. Relaxar o filtro: Se houver anúncios, mostramos eles. 
-    // Se NÃO houver anúncios, mostramos as orgânicas (melhor que tela vazia).
-    const hasAds = allEntries.some(e => e.adDetection.marketingActive);
-    const entries = hasAds 
-      ? allEntries.filter(e => e.adDetection.marketingActive)
-      : allEntries;
+    // 3. Filtro rígido: Mostrar APENAS quem é de fato um anúncio patrocinado
+    const entries = allEntries.filter(e => e.adDetection.marketingActive);
+
+    if (entries.length === 0) {
+      throw new AppError('Nenhuma dessas empresas possui anúncios ativos no Google no momento.', 404);
+    }
 
     // 4. Ordena pelo score de oportunidade (maior primeiro)
     entries.sort((a, b) => b.opportunityScore.total - a.opportunityScore.total);
