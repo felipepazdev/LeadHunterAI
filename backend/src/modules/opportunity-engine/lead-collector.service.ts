@@ -74,34 +74,27 @@ export class LeadCollectorService {
       } catch (err) { console.error('[LeadCollector] SerpApi Error:', err); }
     }
 
-    // ── MODO BUSCA GERAL (SERPAPI - GOOGLE MAPS EXCLUSIVO) ──────────────────
+    // ── MODO BUSCA GERAL (MÁXIMA RESILIÊNCIA: MAPS + WEB) ──────────────────
     if (!isOpportunityMode && serpapiKey) {
       try {
-        console.log(`[LeadCollector] BUSCA GERAL (Maps): Usando SerpApi para: ${keyword} em ${city}`);
-        
-        // 1. Tentar Buscar no Google Maps Primeiro (Fiel ao print)
-        const mapsUrl = `https://serpapi.com/search.json?engine=google_maps&q=${encodeURIComponent(keyword)} ${encodeURIComponent(city)}&hl=pt-br&gl=br&google_domain=google.com.br&type=search&api_key=${serpapiKey}`;
+        console.log(`[LeadCollector] BUSCA GERAL RESILIENTE: ${keyword} em ${city}`);
+        const results: RawCompany[] = [];
+
+        // 1. Tentar Google Maps (Nativo)
+        const mapsUrl = `https://serpapi.com/search.json?engine=google_maps&q=${encodeURIComponent(keyword)} ${encodeURIComponent(city)}&hl=pt-br&gl=br&api_key=${serpapiKey}`;
         const mapsResp = await fetch(mapsUrl);
         const mapsJson = await mapsResp.json() as any;
 
-        const results: RawCompany[] = [];
-
-        if (mapsJson.local_results) {
+        if (mapsJson.local_results && mapsJson.local_results.length > 0) {
+          console.log(`[LeadCollector] Encontrados ${mapsJson.local_results.length} leads no Maps.`);
           mapsJson.local_results.forEach((item: any) => {
-             const cleanName = (item.title || item.name || '').split(/[-|]/)[0]?.trim();
-             if (!cleanName || cleanName.length < 3) return;
-
-             const rawUrl = (item.website || '').toLowerCase();
-             const isInstagram = rawUrl.includes('instagram.com');
-             const isSocialOrDir = ['facebook.com','linkedin.com','guiamais.com.br','doctoralia.com','telelistas.net','cnpj.biz'].some(d => rawUrl.includes(d));
-
              results.push({
-               name: cleanName,
+               name: (item.title || item.name || 'Empresa sem Nome').split(/[-|]/)[0]?.trim(),
                phone: item.phone || null,
-               website: (isInstagram || isSocialOrDir || !rawUrl) ? null : rawUrl,
-               instagram: isInstagram ? rawUrl : null,
-               googleMapsLink: item.link || `https://maps.google.com/?q=${encodeURIComponent(item.gps_coordinates?.latitude + ',' + item.gps_coordinates?.longitude || cleanName + ' ' + city)}`,
-               address: item.address || `${city} (Maps)`,
+               website: (item.website||'').includes('instagram') || (item.website||'').includes('facebook') ? null : (item.website || null),
+               instagram: (item.website||'').includes('instagram') ? item.website : null,
+               googleMapsLink: item.link || `https://www.google.com/maps/search/${encodeURIComponent(keyword + ' ' + city)}`,
+               address: item.address || city,
                rating: item.rating || 0,
                reviewsCount: item.reviews || 0,
                isSponsored: false
@@ -109,34 +102,40 @@ export class LeadCollectorService {
           });
         }
 
-        // 2. Fallback: Se o Maps por algum motivo não trouxer nada, tenta busca orgânica (Web) filtrando lixo
-        if (results.length === 0) {
-           console.log(`[LeadCollector] Fallback: Maps vazio, tentando Busca Web para ${keyword} em ${city}...`);
-           const webUrl = `https://serpapi.com/search.json?engine=google&q=lista+de+${encodeURIComponent(keyword)}+em+${encodeURIComponent(city)}&hl=pt-br&gl=br&google_domain=google.com.br&api_key=${serpapiKey}`;
-           const webResp = await fetch(webUrl);
-           const webJson = await webResp.json() as any;
+        // 2. Se o Maps trouxe pouco ou nada, buscar no Google Web (Pack Local)
+        if (results.length < 5) {
+          console.log(`[LeadCollector] Maps insuficiente (${results.length}), buscando via Google Search Local...`);
+          const webUrl = `https://serpapi.com/search.json?engine=google&q=empresas+de+${encodeURIComponent(keyword)}+em+${encodeURIComponent(city)}&hl=pt-br&gl=br&api_key=${serpapiKey}`;
+          const webResp = await fetch(webUrl);
+          const webJson = await webResp.json() as any;
 
-           if (webJson.local_results) {
-             webJson.local_results.forEach((item: any) => {
-                const cleanName = (item.title || item.name || '').split(/[-|]/)[0]?.trim();
-                if (!cleanName || cleanName.length < 3) return;
-                results.push({
-                   name: cleanName,
+          if (webJson.local_results) {
+            webJson.local_results.forEach((item: any) => {
+               // Evitar duplicados pelo nome
+               const name = (item.title || item.name || '').split(/[-|]/)[0]?.trim();
+               if (!results.some(r => r.name.toLowerCase() === name.toLowerCase())) {
+                 results.push({
+                   name,
                    phone: item.phone || null,
-                   website: item.website || null,
-                   instagram: (item.website||'').includes('instagram') ? item.website : null,
-                   googleMapsLink: item.link || `https://maps.google.com/?q=${encodeURIComponent(cleanName + ' ' + city)}`,
-                   address: item.address || `${city} (Web)`,
+                   website: (item.link||'').includes('instagram') ? null : (item.link || null),
+                   instagram: (item.link||'').includes('instagram') ? item.link : null,
+                   googleMapsLink: `https://www.google.com/maps/search/${encodeURIComponent(name + ' ' + city)}`,
+                   address: item.address || city,
                    rating: item.rating || 4.5,
                    reviewsCount: item.reviews || 10,
                    isSponsored: false
-                });
-             });
-           }
+                 });
+               }
+            });
+          }
         }
 
+        console.log(`[LeadCollector] Coleta finalizada com ${results.length} resultados.`);
         return results;
-      } catch (err) { console.error('[LeadCollector] SerpApi Google Maps Error:', err); }
+      } catch (err) { 
+        console.error('[LeadCollector] Erro Crítico na Coleta SerpApi:', err);
+        return [];
+      }
     }
 
     return [];
