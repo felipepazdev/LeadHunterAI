@@ -25,8 +25,9 @@ export class LeadCollectorService {
     }
     if (isOpportunityMode && serpapiKey) {
       try {
-        console.log(`[LeadCollector] OPORTUNIDADES: Usando SerpApi para: ${keyword} em ${city}`);
-        const response = await fetch(`https://serpapi.com/search.json?engine=google&q=empresas+de+${encodeURIComponent(keyword)}+em+${encodeURIComponent(city)}&hl=pt-br&gl=br&api_key=${serpapiKey}`);
+        console.log(`[LeadCollector] MOTOR OPORTUNIDADES: Buscando anúncios em: ${keyword} em ${city}`);
+        // Forçar motor Google com pack local para achar Ads de negócios da região
+        const response = await fetch(`https://serpapi.com/search.json?engine=google&q=${encodeURIComponent(keyword)}+em+${encodeURIComponent(city)}&tbm=lcl&hl=pt-br&gl=br&api_key=${serpapiKey}`);
         const json = await response.json() as any;
 
         const validCompanies: RawCompany[] = [];
@@ -35,7 +36,7 @@ export class LeadCollectorService {
            const cleanName = (item.title || item.name || '').split(/[-|]/)[0]?.trim();
            if (!cleanName || cleanName.length < 3) return null;
 
-           const rawLink = (item.link || item.website || '').toLowerCase();
+           const rawLink = (item.link || item.website || item.displayed_link || '').toLowerCase();
            const isInstagram = rawLink.includes('instagram.com');
            const isSocialOrDir = [
              'facebook.com','linkedin.com','guiamais.com.br','doctoralia.com','jusbrasil.com','telelistas.net','cnpj.biz'
@@ -45,8 +46,9 @@ export class LeadCollectorService {
            const instagram = isInstagram ? rawLink : null;
 
            let phonePattern = null;
-           if (item.snippet || item.description) {
-               phonePattern = (item.snippet || item.description).match(/\(?\d{2}\)?\s?(?:9\d{4}|[2-9]\d{3})[-\s]?\d{4}/)?.[0];
+           const textToSearch = (item.snippet || item.description || item.phone || '');
+           if (textToSearch) {
+               phonePattern = textToSearch.match(/\(?\d{2}\)?\s?(?:9\d{4}|[2-9]\d{3})[-\s]?\d{4}/)?.[0];
            }
 
            return {
@@ -55,23 +57,31 @@ export class LeadCollectorService {
              website: validWebsite,
              instagram,
              googleMapsLink: item.link || `https://maps.google.com/?q=${encodeURIComponent(cleanName + ' ' + city)}`,
-             address: item.address || `${city} (Web)`,
-             rating: parseFloat((item.rating || 4.5).toString()),
-             reviewsCount: parseInt((item.reviews || 10).toString(), 10),
+             address: item.address || city,
+             rating: parseFloat((item.rating || 4.0).toString()),
+             reviewsCount: parseInt((item.reviews || 5).toString(), 10),
              isSponsored
            };
         };
 
+        // Coletar Anúncios de diferentes fontes do JSON da SerpApi
         if (json.local_ads) json.local_ads.forEach((i:any) => { const c=extractParams(i,true); if(c) validCompanies.push(c); });
         if (json.ads) json.ads.forEach((i:any) => { const c=extractParams(i,true); if(c) validCompanies.push(c); });
+        
+        // No motor tbm=lcl, anúncios vêm dentro de local_results às vezes
         if (json.local_results) {
            json.local_results.forEach((i:any) => {
              const isAds = i.type === 'PlaceAd' || i.sponsored === true;
-             const c = extractParams(i, isAds); if(c) validCompanies.push(c);
+             if (isAds) {
+               const c = extractParams(i, true); 
+               if(c) validCompanies.push(c);
+             }
            });
         }
+
+        console.log(`[LeadCollector] Motor de Oportunidades encontrou ${validCompanies.length} empresas com potencial.`);
         return validCompanies;
-      } catch (err) { console.error('[LeadCollector] SerpApi Error:', err); }
+      } catch (err) { console.error('[LeadCollector] Oportunidades SerpApi Error:', err); }
     }
 
     // ── MODO BUSCA GERAL (MÁXIMA RESILIÊNCIA: MAPS + WEB) ──────────────────
