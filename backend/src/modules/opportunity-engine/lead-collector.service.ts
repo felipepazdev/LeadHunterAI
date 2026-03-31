@@ -70,65 +70,47 @@ export class LeadCollectorService {
       } catch (err) { console.error('[LeadCollector] SerpApi Error:', err); }
     }
 
-    // ── MODO BUSCA GERAL (FIRECRAWL EXCLUSIVO) ──────────────────────────
-    if (firecrawlKey) {
+    // ── MODO BUSCA GERAL (SERPAPI - GOOGLE MAPS EXCLUSIVO) ──────────────────
+    if (!isOpportunityMode && serpapiKey) {
       try {
-        console.log(`[LeadCollector] BUSCA GERAL: Usando Firecrawl para: ${keyword} em ${city}`);
+        console.log(`[LeadCollector] BUSCA GERAL: Usando SerpApi Google Maps para: ${keyword} em ${city}`);
         
-        // Query otimizada para o Google Maps / Negócios Locais, excluindo lixo da web (PDF, GOV, etc)
-        const optimizedQuery = `negócios locais de "${keyword}" em "${city}" -filetype:pdf -site:gov.br -site:jusbrasil.com.br -site:prefeitura.rj.gov.br`;
-
-        const response = await fetch('https://api.firecrawl.dev/v1/search', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${firecrawlKey}` },
-          body: JSON.stringify({ query: optimizedQuery, limit: 30 })
-        });
+        // Usar o motor específico do Google Maps da SerpApi
+        const response = await fetch(`https://serpapi.com/search.json?engine=google_maps&q=${encodeURIComponent(keyword)} ${encodeURIComponent(city)}&hl=pt-br&type=search&api_key=${serpapiKey}`);
         const json = await response.json() as any;
 
-        if (json.success && json.data) {
+        if (json.local_results) {
           const valid: RawCompany[] = [];
-          json.data.forEach((item: any) => {
-             const title = (item.title || '').toLowerCase();
-             
-             // Filtro Rígido de "Lixo da Web" (PDFs, Notícias, Governo, Escolas)
-             if (title.includes('[pdf]') || 
-                 title.includes('prefeitura') || 
-                 title.includes('concurso') || 
-                 title.includes('diário oficial') ||
-                 item.url?.includes('.gov.br') ||
-                 item.url?.includes('.pdf') ||
-                 item.url?.includes('researchgate.net') ||
-                 item.url?.includes('jusbrasil.com.br')
-             ) return;
-
-             const cleanName = (item.title || '').split(/[-|]/)[0]?.trim();
+          
+          json.local_results.forEach((item: any) => {
+             const cleanName = (item.title || item.name || '').split(/[-|]/)[0]?.trim();
              if (!cleanName || cleanName.length < 3) return;
 
              // Identificar se o link é o Instagram deles
-             const rawUrl = (item.url || '').toLowerCase();
+             const rawUrl = (item.website || '').toLowerCase();
              const isInstagram = rawUrl.includes('instagram.com');
              const isSocialOrDir = [
                'facebook.com','linkedin.com','guiamais.com.br','doctoralia.com','telelistas.net','cnpj.biz'
              ].some(d => rawUrl.includes(d));
 
-             const validWebsite = (isInstagram || isSocialOrDir) ? null : rawUrl;
+             const validWebsite = (isInstagram || isSocialOrDir || !rawUrl) ? null : rawUrl;
              const instagram = isInstagram ? rawUrl : null;
 
              valid.push({
                name: cleanName,
-               phone: item.description?.match(/\(?\d{2}\)?\s?(?:9\d{4}|[2-9]\d{3})[-\s]?\d{4}/)?.[0] || null,
+               phone: item.phone || null,
                website: validWebsite,
                instagram,
-               googleMapsLink: `https://maps.google.com/?q=${encodeURIComponent(cleanName + ' ' + city)}`,
-               address: `${city} (Maps)`,
-               rating: 4.8,
-               reviewsCount: Math.floor(Math.random() * 50) + 5,
+               googleMapsLink: item.link || `https://maps.google.com/?q=${encodeURIComponent(item.gps_coordinates?.latitude + ',' + item.gps_coordinates?.longitude || cleanName + ' ' + city)}`,
+               address: item.address || `${city} (Maps)`,
+               rating: item.rating || 0,
+               reviewsCount: item.reviews || 0,
                isSponsored: false
              });
           });
           return valid;
         }
-      } catch (err) { console.error('[LeadCollector] Firecrawl Error:', err); }
+      } catch (err) { console.error('[LeadCollector] SerpApi Google Maps Error:', err); }
     }
 
     return [];
