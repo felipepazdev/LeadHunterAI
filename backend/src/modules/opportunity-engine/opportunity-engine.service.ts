@@ -42,11 +42,18 @@ export class OpportunityEngineService {
     }
 
     // 2. Processa cada empresa no pipeline completo (paralelo)
-    const entries: LeadRankEntry[] = await Promise.all(
+    const allEntries: LeadRankEntry[] = await Promise.all(
       companies.map(company => this.processCompany(company))
     );
 
-    // 3. Ordena pelo score de oportunidade (maior primeiro)
+    // 3. Filtro crucial: O cliente solicitou mostrar APENAS leads patrocinados no Google
+    // Aplicamos o filtro quando for uma busca (LeadCollector)
+    const isSearchMode = !inputCompanies?.length;
+    const entries = allEntries.filter(e => 
+      isSearchMode ? e.adDetection.marketingActive : true
+    );
+
+    // 4. Ordena pelo score de oportunidade (maior primeiro)
     entries.sort((a, b) => b.opportunityScore.total - a.opportunityScore.total);
 
     return entries;

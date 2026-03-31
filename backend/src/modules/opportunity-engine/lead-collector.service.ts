@@ -57,7 +57,7 @@ export class LeadCollectorService {
           },
           body: JSON.stringify({
             query: `empresas de ${keyword} em ${city} brasil`,
-            limit: 10
+            limit: 30
           })
         });
 
@@ -71,18 +71,36 @@ export class LeadCollectorService {
              const titleParts = (item.title || '').split(/[-|]/);
              const cleanName = titleParts[0]?.trim() || `${keyword.toUpperCase()} #${idx + 1}`;
              
-             // Busca regex por telefone na descrição do Google
              const phoneMatch = item.description?.match(/\(?\d{2}\)?\s?(?:9\d{4}|[2-9]\d{3})[-\s]?\d{4}/);
              
-             // Pula itens que são genéricos demais
-             if (cleanName.length < 3 || item.url?.includes('guiamais') || item.url?.includes('doctoralia')) {
+             // Domínios que não consideramos como sendo o "site oficial" da empresa
+             const lowerUrl = (item.url || '').toLowerCase();
+             const isGenericDirectory = [
+               'guiamais.com.br', 'doctoralia.com', 'jusbrasil.com', 'telelistas.net',
+               'apontador.com.br', 'cnpj.biz', 'casadosdados.com.br', 'econodata.com.br',
+               'consultasocio.com', 'listamais.com.br', 'hublocal.com.br', 'empresasdobrasil.com',
+               'infojobs.com.br', 'vagas.com.br', 'reclameaqui.com.br', 'solutudo.com.br'
+             ].some(d => lowerUrl.includes(d));
+
+             const isSocialNetwork = [
+               'instagram.com', 'facebook.com', 'linkedin.com', 'youtube.com', 'tiktok.com',
+               'twitter.com', 'x.com', 'pinterest.com', 'whatsapp.com', 'linktr.ee'
+             ].some(d => lowerUrl.includes(d));
+
+             // Se for um diretório de empresas (lista), provavelmente o nome extraído é genérico ou lixo, 
+             // então a gente pula o LEAD inteiro se o nome for pequeno ou for de um diretório que retorna listas.
+             if (cleanName.length < 3 || (isGenericDirectory && !cleanName.includes('-'))) {
                 return;
              }
+
+             // Se for rede social ou algum outro diretório que passou, definimos o site como null
+             // pois a empresa não possui um "website real oficial" no seu próprio domínio
+             const validWebsite = (isGenericDirectory || isSocialNetwork || !item.url) ? null : item.url;
 
              validCompanies.push({
                name: cleanName,
                phone: phoneMatch ? phoneMatch[0] : null,
-               website: item.url || null,
+               website: validWebsite,
                googleMapsLink: `https://maps.google.com/?q=${encodeURIComponent(cleanName + ' ' + city)}`,
                address: `${city} (Endereço obtido via busca web)`,
                rating: parseFloat((4.0 + Math.random() * 0.9).toFixed(1)),
@@ -104,7 +122,7 @@ export class LeadCollectorService {
     }
 
     // FALLBACK (Mock Realista)
-    const count = Math.floor(Math.random() * 5) + 6; // 6-10 empresas
+    const count = Math.floor(Math.random() * 15) + 15; // 15-30 empresas
     const ddd = getDddForCity(city);
 
     return Array.from({ length: count }, (_, i) => {
