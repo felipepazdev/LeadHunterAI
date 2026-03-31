@@ -16,9 +16,13 @@ function getDddForCity(city: string): number {
 export class LeadCollectorService {
   static async collect(keyword: string, city: string, isOpportunityMode: boolean = false): Promise<RawCompany[]> {
     const serpapiKey = process.env.SERPAPI_KEY;
-    const firecrawlKey = process.env.FIRECRAWL_API_KEY;
-
-    // ── MODO OPORTUNIDADES (SERPAPI EXCLUSIVA) ──────────────────────────
+    // v1.1 - Force Deploy - Debug: Search results for ${keyword} in ${city}
+    console.log(`[LeadCollector] INICIANDO COLETA: ${keyword} em ${city} (Modo: ${isOpportunityMode ? 'Oportunidades' : 'Geral'})`);
+    
+    if (!serpapiKey) {
+      console.error('[LeadCollector] CRÍTICO: SERPAPI_KEY não configurada no backend!');
+      return [];
+    }
     if (isOpportunityMode && serpapiKey) {
       try {
         console.log(`[LeadCollector] OPORTUNIDADES: Usando SerpApi para: ${keyword} em ${city}`);
