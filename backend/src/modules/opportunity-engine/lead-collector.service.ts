@@ -187,30 +187,8 @@ export class LeadCollectorService {
       }
     }
 
-    // FALLBACK (Mock Realista se não tiver chave ou se tudo falhar)
-    const count = Math.floor(Math.random() * 15) + 15;
-    const ddd = getDddForCity(city);
-
-    return Array.from({ length: count }, (_, i) => {
-      const rating = parseFloat((3.0 + Math.random() * 2.0).toFixed(1));
-      const hasWebsite = Math.random() > 0.25;
-
-      const suffixes = BUSINESS_TYPES.default;
-      const suffix = suffixes[Math.floor(Math.random() * suffixes.length)];
-      const prefixes = ['Silva', 'Cunha', 'Tech', 'Nova', 'Solução', 'Elite', 'Global', 'Líder', 'Master', 'Excellence', 'Premium', 'Prime'];
-      const prefix = prefixes[(i * 3 + keyword.length) % prefixes.length];
-      const businessName = `${prefix} ${keyword.charAt(0).toUpperCase() + keyword.slice(1)} ${suffix}`;
-
-      return {
-        name:           businessName,
-        phone:          `(${ddd}) 9${Math.floor(Math.random() * 90000000 + 10000000)}`,
-        website:        hasWebsite ? `https://${prefix.toLowerCase().replace(/[í]/g, 'i').replace(/[ç]/g, 'c')}${keyword.toLowerCase().replace(/\s+/g, '')}.com.br` : null,
-        googleMapsLink: `https://maps.google.com/?q=${encodeURIComponent(businessName + ' ' + city)}`,
-        address:        `Av. ${['Brasil', 'Paulista', 'Principal', 'das Américas'][i % 4]}, ${100 + i * 12} — ${city}`,
-        rating,
-        reviewsCount:   Math.floor(Math.random() * 900 + 5),
-        isSponsored:    Math.random() > 0.5 // mock
-      };
-    });
+    // Caso nada seja encontrado ou ocorra falha geral nas APIs acima
+    console.log('[LeadCollector] Nenhuma empresa real encontrada para os termos. Retornando lista vazia.');
+    return [];
   }
 }
